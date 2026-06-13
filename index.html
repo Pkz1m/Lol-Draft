@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LoL Draft Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup-screen" class="screen active">
+  <div class="bg-layer"></div>
+  <div class="particles" id="particles"></div>
+  <div class="card setup-card">
+    <div class="logo-block">
+      <span class="gem" id="gem-anim">◆</span>
+      <h1 class="logo-title">Draft <em>Tool</em></h1>
+      <p class="logo-sub">League of Legends · Draft Competitivo</p>
+      <div class="divider-line"></div>
+    </div>
+    <div class="form-block">
+      <div class="team-row">
+        <div class="ti blue-ti">
+          <label>TIME AZUL</label>
+          <input id="blue-team-name" type="text" placeholder="Nome do time..." maxlength="20" value="Time Azul"/>
+        </div>
+        <div class="vs-sep"><em>VS</em></div>
+        <div class="ti red-ti">
+          <label>TIME VERMELHO</label>
+          <input id="red-team-name" type="text" placeholder="Nome do time..." maxlength="20" value="Time Vermelho"/>
+        </div>
+      </div>
+
+      <!-- FORMAT SELECTION -->
+      <div class="format-row">
+        <span class="timer-lbl">FORMATO</span>
+        <div class="format-btns">
+          <button class="fbtn active" data-fmt="bo1">BO1</button>
+          <button class="fbtn" data-fmt="bo3">MD3</button>
+          <button class="fbtn" data-fmt="bo5">MD5</button>
+        </div>
+      </div>
+
+      <!-- FEARLESS (only bo3/bo5) -->
+      <div class="fearless-row" id="fearless-row" style="display:none">
+        <label class="fearless-label">
+          <input type="checkbox" id="fearless-check"/>
+          <span class="fearless-txt">⚔ Fearless Draft <em>(campeões já jogados não podem ser reutilizados)</em></span>
+        </label>
+      </div>
+
+      <div class="timer-row">
+        <span class="timer-lbl">TEMPO POR AÇÃO</span>
+        <div class="timer-btns">
+          <button class="tbtn active" data-t="30">30s</button>
+          <button class="tbtn" data-t="60">60s</button>
+          <button class="tbtn" data-t="90">90s</button>
+          <button class="tbtn" data-t="0">∞</button>
+        </div>
+      </div>
+      <button id="btn-start" class="gold-btn"><span>Iniciar Draft</span><i class="shine"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE -->
+<div id="share-screen" class="screen">
+  <div class="bg-layer"></div>
+  <div class="card share-card">
+    <div class="logo-block compact">
+      <span class="gem">◆</span>
+      <h1 class="logo-title sm">Draft <em>Tool</em></h1>
+      <div class="divider-line"></div>
+    </div>
+    <h2 class="share-h">Compartilhe os Links</h2>
+    <p class="share-p">Cada time acessa seu link e só age na sua vez</p>
+    <div class="link-card blue-lc">
+      <div class="lc-label">🔵 Time Azul — <b id="sbn"></b></div>
+      <div class="lc-row"><input id="lnk-blue" readonly/><button class="copy-btn" onclick="copyLink('blue')">Copiar</button></div>
+    </div>
+    <div class="link-card red-lc">
+      <div class="lc-label">🔴 Time Vermelho — <b id="srn"></b></div>
+      <div class="lc-row"><input id="lnk-red" readonly/><button class="copy-btn" onclick="copyLink('red')">Copiar</button></div>
+    </div>
+    <p class="share-note">💡 Abra qualquer link para assistir como espectador</p>
+    <div class="share-btns">
+      <button class="gold-btn sm" onclick="enter(null)">👁 Espectador</button>
+      <button class="gold-btn sm blue" onclick="enter('blue')">🔵 Entrar Azul</button>
+      <button class="gold-btn sm red"  onclick="enter('red')">🔴 Entrar Vermelho</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME SELECT (MD3/MD5 between games) -->
+<div id="game-select-screen" class="screen">
+  <div class="bg-layer"></div>
+  <div class="card game-select-card">
+    <span class="gem big">◆</span>
+    <h2 class="share-h" id="gs-title">Partida 2</h2>
+    <p class="share-p" id="gs-sub">Inicie o próximo draft</p>
+    <div class="gs-scores" id="gs-scores"></div>
+    <div class="gs-fearless" id="gs-fearless-block" style="display:none">
+      <h3>⚔ Campeões Bloqueados (Fearless)</h3>
+      <div class="fearless-pool" id="fearless-pool"></div>
+    </div>
+    <button class="gold-btn" id="btn-next-game">Iniciar Próximo Draft</button>
+    <button class="gold-btn sm" id="btn-end-series" style="margin-top:8px">Encerrar Série</button>
+  </div>
+</div>
+
+<!-- DRAFT -->
+<div id="draft-screen" class="screen">
+  <header class="hdr">
+    <div class="hdr-team blue" id="hdr-blue">Time Azul</div>
+    <div class="hdr-mid">
+      <div class="phase-tag" id="phase-tag">FASE DE BAN 1</div>
+      <div class="clock-area">
+        <div class="turn-side" id="turn-side-left"></div>
+        <div class="clock-wrap">
+          <svg class="clock-svg" viewBox="0 0 72 72">
+            <circle class="clock-bg" cx="36" cy="36" r="30"/>
+            <circle class="clock-arc" id="clock-arc" cx="36" cy="36" r="30"/>
+          </svg>
+          <div class="clock-inner">
+            <span id="clock-num">30</span>
+            <span class="clock-seg">seg</span>
+          </div>
+        </div>
+        <div class="turn-side" id="turn-side-right"></div>
+      </div>
+      <div class="action-tag" id="action-tag">Banindo</div>
+    </div>
+    <div class="hdr-team red" id="hdr-red">Time Vermelho</div>
+  </header>
+
+  <!-- BAN DISPLAY BAR -->
+  <div class="ban-display-bar">
+    <div class="ban-display-side" id="ban-display-blue"></div>
+    <div class="ban-display-center">BANIMENTOS</div>
+    <div class="ban-display-side right" id="ban-display-red"></div>
+  </div>
+
+  <div class="board">
+    <!-- BLUE SIDE -->
+    <div class="side blue-side">
+      <div class="bans-bar" id="blue-bans">
+        <div class="ban-slot" data-team="blue" data-i="0"><span>B</span></div>
+        <div class="ban-slot" data-team="blue" data-i="1"><span>B</span></div>
+        <div class="ban-slot" data-team="blue" data-i="2"><span>B</span></div>
+        <div class="ban-slot" data-team="blue" data-i="3"><span>B</span></div>
+        <div class="ban-slot" data-team="blue" data-i="4"><span>B</span></div>
+      </div>
+      <div class="picks-list" id="blue-picks">
+        <div class="pick-slot" data-team="blue" data-i="0"><div class="pi"><img class="li" data-lane="top"/><span class="pr">Top</span><span class="pn">Esperando...</span></div></div>
+        <div class="pick-slot" data-team="blue" data-i="1"><div class="pi"><img class="li" data-lane="jungle"/><span class="pr">Jungle</span><span class="pn">Esperando...</span></div></div>
+        <div class="pick-slot" data-team="blue" data-i="2"><div class="pi"><img class="li" data-lane="mid"/><span class="pr">Mid</span><span class="pn">Esperando...</span></div></div>
+        <div class="pick-slot" data-team="blue" data-i="3"><div class="pi"><img class="li" data-lane="adc"/><span class="pr">ADC</span><span class="pn">Esperando...</span></div></div>
+        <div class="pick-slot" data-team="blue" data-i="4"><div class="pi"><img class="li" data-lane="support"/><span class="pr">Suporte</span><span class="pn">Esperando...</span></div></div>
+      </div>
+    </div>
+
+    <!-- POOL -->
+    <div class="pool" id="pool-wrap">
+      <div class="pool-hdr">
+        <input id="srch" type="text" placeholder="🔍 Buscar campeão..."/>
+        <div class="role-bar">
+          <button class="rb active" data-role="all"><img class="ri" data-lane="all"/><span>Todos</span></button>
+          <button class="rb" data-role="top"><img class="ri" data-lane="top"/><span>Top</span></button>
+          <button class="rb" data-role="jungle"><img class="ri" data-lane="jungle"/><span>Jgl</span></button>
+          <button class="rb" data-role="mid"><img class="ri" data-lane="mid"/><span>Mid</span></button>
+          <button class="rb" data-role="adc"><img class="ri" data-lane="adc"/><span>ADC</span></button>
+          <button class="rb" data-role="support"><img class="ri" data-lane="support"/><span>Sup</span></button>
+        </div>
+      </div>
+      <div class="pool-grid" id="pool-grid"></div>
+      <div class="champ-tip" id="champ-tip"><img id="tip-img"/><span id="tip-name"></span></div>
+      <div class="spectator-veil" id="spectator-veil" style="display:none">
+        <span>👁 Modo Espectador</span>
+      </div>
+    </div>
+
+    <!-- RED SIDE -->
+    <div class="side red-side">
+      <div class="bans-bar" id="red-bans">
+        <div class="ban-slot" data-team="red" data-i="0"><span>B</span></div>
+        <div class="ban-slot" data-team="red" data-i="1"><span>B</span></div>
+        <div class="ban-slot" data-team="red" data-i="2"><span>B</span></div>
+        <div class="ban-slot" data-team="red" data-i="3"><span>B</span></div>
+        <div class="ban-slot" data-team="red" data-i="4"><span>B</span></div>
+      </div>
+      <div class="picks-list" id="red-picks">
+        <div class="pick-slot" data-team="red" data-i="0"><div class="pi"><img class="li" data-lane="top"/><span class="pr">Top</span><span class="pn">Esperando...</span></div></div>
+        <div class="pick-slot" data-team="red" data-i="1"><div class="pi"><img class="li" data-lane="jungle"/><span class="pr">Jungle</span><span class="pn">Esperando...</span></div></div>
+        <div class="pick-slot" data-team="red" data-i="2"><div class="pi"><img class="li" data-lane="mid"/><span class="pr">Mid</span><span class="pn">Esperando...</span></div></div>
+        <div class="pick-slot" data-team="red" data-i="3"><div class="pi"><img class="li" data-lane="adc"/><span class="pr">ADC</span><span class="pn">Esperando...</span></div></div>
+        <div class="pick-slot" data-team="red" data-i="4"><div class="pi"><img class="li" data-lane="support"/><span class="pr">Suporte</span><span class="pn">Esperando...</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="ftr">
+    <span id="ftr-txt">Carregando...</span>
+    <div class="ftr-right">
+      <span id="game-badge" class="game-badge"></span>
+      <button id="btn-reset" class="reset-btn">↺ Reiniciar</button>
+    </div>
+  </footer>
+</div>
+
+<!-- RESULT -->
+<div id="result-screen" class="screen">
+  <div class="card result-card">
+    <span class="gem big">◆</span>
+    <h2 class="result-h">Draft Concluído</h2>
+    <div class="result-row">
+      <div class="rt blue">
+        <h3 id="rb-name"></h3>
+        <p class="rbans"><b>Bans:</b> <span id="rb-bans"></span></p>
+        <div id="rb-picks"></div>
+      </div>
+      <span class="rdiv">◆</span>
+      <div class="rt red">
+        <h3 id="rr-name"></h3>
+        <p class="rbans"><b>Bans:</b> <span id="rr-bans"></span></p>
+        <div id="rr-picks"></div>
+      </div>
+    </div>
+    <div class="result-btns">
+      <button id="btn-next" class="gold-btn" style="display:none">Próxima Partida →</button>
+      <button id="btn-new" class="gold-btn sm">Novo Draft</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
